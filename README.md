@@ -29,8 +29,10 @@ A pipeline automatiza o processo de treinamento, avaliação e exportação do m
 </ul>
 
 <li>Para cada estratégia, treina uma Árvore de Decisão com:</li>
+     <ul>
      <li>Otimização de hiperparâmetros via GridSearchCV</li>
      <li>Validação cruzada com métricas como F1-Score</li>
+     </ul>
 
 <li>Seleciona a melhor combinação de sampling + árvore otimizada</li>
 
