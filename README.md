@@ -17,17 +17,17 @@ A pipeline automatiza o processo de treinamento, avaliação e exportação do m
 
 <h3> ⚙️ O que esta pipeline faz? </h3>
 
-Carrega os dados limpos da etapa anterior (fora do projeto)
+<li>Carrega os dados limpos da etapa anterior (fora do projeto)</li>
 
-Realiza o pré-processamento para treino
+<li>Realiza o pré-processamento para treino</li>
 
-Treina diferentes hiperparâmetros para Árvore de Decisão
+<li>Treina diferentes hiperparâmetros para Árvore de Decisão</li>
 
-Avalia os modelos com validação cruzada e métricas como F1-score, AUC, acurácia
+<li>Avalia os modelos com validação cruzada e métricas como F1-score, AUC, acurácia</li>
 
-Seleciona o melhor modelo automaticamente
+<li>Seleciona o melhor modelo automaticamente</li>
 
-Exporta o modelo final em .pkl para uso posterior
+<li>Exporta o modelo final em .pkl para uso posterior</li>
 
 <h3>▶️ Como executar</h3>
 
