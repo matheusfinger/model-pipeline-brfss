@@ -16,15 +16,17 @@ A pipeline automatiza o processo de treinamento, avaliação e exportação do m
     └── .gitignore <br>
 
 <h3> ⚙️ O que esta pipeline faz? </h3>
-
+<ul>
 <li>Carrega os dados limpos da etapa anterior (fora do projeto)</li>
 
 <li>Aplica diferentes estratégias de balanceamento de classes, como:</li>
+<ul>
      <li>RandomUnderSampler</li>
      <li>SMOTE</li>
      <li>ADASYN</li>
      <li>SMOTE+RandomUnderSampler</li>
      <li>ADASYN+RandomUnderSampler</li>
+</ul>
 
 <li>Para cada estratégia, treina uma Árvore de Decisão com:</li>
      <li>Otimização de hiperparâmetros via GridSearchCV</li>
@@ -33,7 +35,7 @@ A pipeline automatiza o processo de treinamento, avaliação e exportação do m
 <li>Seleciona a melhor combinação de sampling + árvore otimizada</li>
 
 <li>Exporta o modelo final em .pkl para uso posterior</li>
-
+</ul>
 <h3>▶️ Como executar</h3>
 
 Clone o repositório
