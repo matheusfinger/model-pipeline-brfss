@@ -6,7 +6,7 @@ A pipeline automatiza o processo de treinamento, avaliação e exportação do m
 
 <h3> 📁 Estrutura do Projeto </h3>
 
-brfss-model/
+model-pipeline-brfss/
 ├── brfss_model/             # Módulo com os scripts
 │   └── train.py             # Script principal de treinamento
 ├── models/                  # Modelo final salvo em binário
@@ -33,8 +33,8 @@ Exporta o modelo final em .pkl para uso posterior
 
 Clone o repositório
 
-    git clone https://github.com/SEU_USUARIO/brfss-model.git
-    cd brfss-model
+    git clone https://github.com/matheusfinger/model-pipeline-brfss.git
+    cd model-pipeline-brfss
 
 Instale o Poetry (caso ainda não tenha)
 
