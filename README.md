@@ -19,13 +19,18 @@ A pipeline automatiza o processo de treinamento, avaliação e exportação do m
 
 <li>Carrega os dados limpos da etapa anterior (fora do projeto)</li>
 
-<li>Realiza o pré-processamento para treino</li>
+<li>Aplica diferentes estratégias de balanceamento de classes, como:</li>
+     <li>RandomUnderSampler</li>
+     <li>SMOTE</li>
+     <li>ADASYN</li>
+     <li>SMOTE+RandomUnderSampler</li>
+     <li>ADASYN+RandomUnderSampler</li>
 
-<li>Treina diferentes hiperparâmetros para Árvore de Decisão</li>
+<li>Para cada estratégia, treina uma Árvore de Decisão com:</li>
+     <li>Otimização de hiperparâmetros via GridSearchCV</li>
+     <li>Validação cruzada com métricas como F1-Score</li>
 
-<li>Avalia os modelos com validação cruzada e métricas como F1-score, AUC, acurácia</li>
-
-<li>Seleciona o melhor modelo automaticamente</li>
+<li>Seleciona a melhor combinação de sampling + árvore otimizada</li>
 
 <li>Exporta o modelo final em .pkl para uso posterior</li>
 
