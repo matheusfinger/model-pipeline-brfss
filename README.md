@@ -6,14 +6,14 @@ A pipeline automatiza o processo de treinamento, avaliação e exportação do m
 
 <h3> 📁 Estrutura do Projeto </h3>
 
-model-pipeline-brfss/
-├── brfss_model/             # Módulo com os scripts
-│   └── train.py             # Script principal de treinamento
-├── models/                  # Modelo final salvo em binário
-│   └── best_model.pkl
-├── pyproject.toml           # Configuração do projeto com Poetry
-├── README.md
-└── .gitignore
+model-pipeline-brfss/ <br>
+├── brfss_model/             # Módulo com os scripts <br>
+│   └── train.py             # Script principal de treinamento <br>
+├── models/                  # Modelo final salvo em binário <br>
+│   └── best_model.pkl <br>
+├── pyproject.toml           # Configuração do projeto com Poetry <br>
+├── README.md <br>
+└── .gitignore <br>
 
 <h3> ⚙️ O que esta pipeline faz? </h3>
 
