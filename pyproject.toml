@@ -1,0 +1,29 @@
+[project]
+name = "model-pipeline-brfss"
+version = "0.1.0"
+description = "Este repositório contém a pipeline de Machine Learning do projeto BRFSS (Behavioral Risk Factor Surveillance System), parte de um trabalho acadêmico da disciplina de Engenharia de Sistemas Inteligentes."
+authors = [
+    {name = "Matheus Finger",email = "matheusfingerramos@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pandas>=2.3.0,<3.0.0",
+    "numpy>=1.24.0",
+    "scikit-learn>=1.2.0,<1.7.0",
+    "imbalanced-learn>=0.13.0",
+    "pickle-mixin>=1.0.0"
+]
+
+[tool.poetry]
+name = "model-pipeline"
+version = "0.1.0"
+description = "Modelo do projeto"
+authors = ["Matheus Finger <matheusfingerramos@gmail.com>"]
+packages = [
+    { include = "model_pipeline" }
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

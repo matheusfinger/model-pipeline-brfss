@@ -1,0 +1,15 @@
+2025-07-26 16:07:38,174 - INFO - Iniciando experimentos com diferentes métodos de balanceamento...
+2025-07-26 16:07:38,174 - INFO - Rodando experimento com SMOTE
+2025-07-26 16:07:44,589 - INFO - Rodando experimento com ADASYN
+2025-07-26 16:07:45,727 - INFO - Rodando experimento com Undersampling
+2025-07-26 16:07:46,783 - INFO - Rodando experimento com SMOTE+Undersampling
+2025-07-26 16:07:47,901 - INFO - Rodando experimento com ADASYN+Undersampling
+2025-07-26 16:07:49,060 - INFO - Melhor modelo: DecisionTree com SMOTE (F1: 0.3798)
+2025-07-26 16:07:49,060 - INFO - Treinando modelo final...
+2025-07-26 16:07:49,382 - INFO - Métricas finais:
+2025-07-26 16:07:49,382 - INFO - accuracy_score: 0.6600
+2025-07-26 16:07:49,382 - INFO - roc_auc_score: 0.6549
+2025-07-26 16:07:49,382 - INFO - f1_score: 0.3929
+2025-07-26 16:07:49,382 - INFO - precision_score: 0.2821
+2025-07-26 16:07:49,382 - INFO - recall_score: 0.6471
+2025-07-26 16:07:49,382 - INFO - Salvando métricas em metrics-DecisionTree-SMOTE-f1.json...
