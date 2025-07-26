@@ -7,10 +7,10 @@ A pipeline automatiza o processo de treinamento, avaliação e exportação do m
 <h3> 📁 Estrutura do Projeto </h3>
 
      model-pipeline-brfss/ <br>
-    ├── brfss_model/             # Módulo com os scripts <br>
-    │   └── train.py             # Script principal de treinamento <br>
-    ├── models/                  # Modelo final salvo em binário <br>
-    │   └── best_model.pkl <br>
+    ├── model_pipeline/             # Módulo com os scripts <br>
+    │   └── __init__.py
+    │   └── pipeline.py             # Script de treinamento <br>
+    ├── model-DecisionTree*.pkl <br> 
     ├── pyproject.toml           # Configuração do projeto com Poetry <br>
     ├── README.md <br>
     └── .gitignore <br>
@@ -55,4 +55,4 @@ Instale as dependências
 
 Execute a pipeline
 
-    poetry run python pipeline.py
+    poetry run python model_pipeline/pipeline.py
