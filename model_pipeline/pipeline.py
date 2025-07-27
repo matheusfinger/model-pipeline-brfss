@@ -16,6 +16,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import make_scorer, f1_score
 import requests
+import os
 
 def download_dataset() -> pd.DataFrame:
     """
@@ -293,14 +294,8 @@ def select_best_model(fold_results):
     return max(avg_scores.items(), key=lambda x: x[1])[0]
 
 
-def start():
-    """Função principal"""
-    logging.basicConfig(
-        filename='diabetes_model.log', 
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s'
-    )
-    logger = logging.getLogger(__name__)
+def train(logger):
+    """Função de treino do modelo"""
 
     dataset_path = download_dataset()
     # Carrega o dataset
@@ -387,5 +382,36 @@ def start():
         'metrics': metrics
     }
 
+def checaModelo() -> list:
+    '''
+    Retorna lista de modelos salvos no diretório atual
+    '''
+    arquivos_correspondentes = [arquivo for arquivo in os.listdir() 
+                           if arquivo.startswith('model-DecisionTree')]
+
+    return arquivos_correspondentes
+
+def testa_modelo():
+    '''
+    TODO
+    '''
+    pass
+
 if __name__ == "__main__":
-    start()
+    logging.basicConfig(
+        filename='diabetes_model.log', 
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
+    logger = logging.getLogger(__name__)
+
+    arq_modelo = checaModelo()
+    if not arq_modelo:
+        train(logger)
+    elif len(arq_modelo) > 1:
+        logger.info("Foram identificados mais de um modelo. Por favor, mantenha somente um modelo no projeto.")
+    else:
+        caminho_modelo = arq_modelo[0]
+        
+
+    train()
