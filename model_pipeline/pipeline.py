@@ -57,7 +57,7 @@ def download_dataset() -> pd.DataFrame:
             with open(nome_arquivo, 'wb') as f:
                 f.write(response.content)
             
-            return nome_arquivo
+            return (nome_arquivo, ultimo_ano_valido)
         except requests.exceptions.RequestException as e:
             return None
     else:
@@ -75,9 +75,9 @@ def load_dataset(dataset_path) -> pd.DataFrame:
     """
     return pd.read_csv(dataset_path)
 
-def save_model(model, model_name, data_balance, cv_criteria):
+def save_model(model, model_name, data_balance, cv_criteria, ano: str):
     """Salva o modelo em arquivo pickle"""
-    with open(f"model-{model_name}-{cv_criteria.upper()}-{data_balance}.pkl", "wb") as f:
+    with open(f"model-{model_name}-{cv_criteria.upper()}-{data_balance}-{ano}.pkl", "wb") as f:
         pickle.dump(model, f)
 
 def load_model(file_model_path):
@@ -250,7 +250,7 @@ def run_experiment(dataset, x_features, y_label, data_balance, models, grid_para
     return models_info_per_fold
 
 
-def build_champion_model(dataset, x_features, y_label, data_balance, model_info, cv_criteria):
+def build_champion_model(dataset, x_features, y_label, data_balance, model_info, cv_criteria, ano: str):
     """Constrói o modelo campeão"""
     X = dataset[x_features]
     y = dataset[y_label]
@@ -276,7 +276,7 @@ def build_champion_model(dataset, x_features, y_label, data_balance, model_info,
 
     metrics_scores = extract_model_metrics_scores(y_test, y_pred, y_prob)
 
-    save_model(grid_model.best_estimator_, model_info["name"], data_balance, cv_criteria)
+    save_model(grid_model.best_estimator_, model_info["name"], data_balance, cv_criteria, ano)
 
     return metrics_scores
 
@@ -297,9 +297,10 @@ def select_best_model(fold_results):
 def train(logger):
     """Função de treino do modelo"""
 
-    dataset_path = download_dataset()
+    dataset_path, ultimo_ano = download_dataset()
     # Carrega o dataset
     dataset = load_dataset(dataset_path)
+    dataset = dataset.head(500)
     dataset['Diabetes_binary'] = dataset['Diabetes_binary'].round().astype(int)
     x_features = dataset.columns.drop('Diabetes_binary').tolist()
     y_label = 'Diabetes_binary'
@@ -364,7 +365,8 @@ def train(logger):
         y_label=y_label,
         data_balance=best_method,
         model_info=model_info,
-        cv_criteria="f1"
+        cv_criteria="f1",
+        ano = str(ultimo_ano)
     )
 
     logger.info("Métricas finais:")
@@ -387,15 +389,41 @@ def checaModelo() -> list:
     Retorna lista de modelos salvos no diretório atual
     '''
     arquivos_correspondentes = [arquivo for arquivo in os.listdir() 
-                           if arquivo.startswith('model-DecisionTree')]
+                           if arquivo.startswith('model-DecisionTree') and arquivo.endswith('.pkl')]
 
     return arquivos_correspondentes
 
-def testa_modelo():
+def testa_modelo(dataset_path: str, model_path: str) -> float:
     '''
-    TODO
+    Testa o modelo com os dados do dataset e retorna o F1-score
+    
+    Parameters:
+        dataset_path (str): Caminho para o arquivo CSV do dataset
+        model_path (str): Caminho para o arquivo do modelo pickle
+    
+    Returns:
+        float: Valor do F1-score obtido
     '''
-    pass
+    # Carrega o dataset
+    dataset = load_dataset(dataset_path)
+    dataset['Diabetes_binary'] = dataset['Diabetes_binary'].round().astype(int)
+    x_features = dataset.columns.drop('Diabetes_binary').tolist()
+    y_label = 'Diabetes_binary'
+    
+    # Carrega o modelo
+    model = load_model(model_path)
+    
+    # Prepara os dados
+    X = dataset[x_features]
+    y = dataset[y_label]
+    
+    # Faz as predições
+    y_pred = model.predict(X)
+    
+    # Calcula o F1-score
+    f1 = metrics.f1_score(y, y_pred)
+    
+    return f1
 
 if __name__ == "__main__":
     logging.basicConfig(
@@ -412,6 +440,28 @@ if __name__ == "__main__":
         logger.info("Foram identificados mais de um modelo. Por favor, mantenha somente um modelo no projeto.")
     else:
         caminho_modelo = arq_modelo[0]
-        
-
-    train()
+        ano_modelo = caminho_modelo[-8:-4]
+        dataset_info = download_dataset()
+        if dataset_info is None:
+            logger.error("Falha ao baixar o dataset mais recente")
+            sys.exit(1)
+        dataset_path, ultimo_ano = dataset_info
+        # Verifica se é atual
+        if ano_modelo != str(ultimo_ano):
+            logger.info(f"Modelo existente é de {ano_modelo}, mas dataset mais recente é de {ultimo_ano}")
+            logger.info("Testando modelo com dados atuais...")
+            try:
+                f1 = testa_modelo(dataset_path, caminho_modelo)
+                logger.info(f"F1-score do modelo atual: {f1:.4f}")
+                
+                if f1 < 0.38:  # Se performance abaixo do threshold
+                    logger.info("Performance abaixo do esperado. Treinando novo modelo...")
+                    train(logger)
+                else:
+                    logger.info("Performance aceitável. Mantendo modelo existente.")
+            except Exception as e:
+                logger.error(f"Erro ao testar modelo: {str(e)}")
+                logger.info("Treinando novo modelo devido ao erro...")
+                train(logger)
+        else:
+            logger.info(f"Modelo existente é o mais atual")
