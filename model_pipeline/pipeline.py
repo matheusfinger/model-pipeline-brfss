@@ -15,10 +15,56 @@ from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import make_scorer, f1_score
+import requests
+
+def download_dataset() -> pd.DataFrame:
+    """
+    Faz o download do dataset mais recente.
+
+    Returns:
+        sdp_dataset (pandas.DataFrame): DataFrame com os dados carregados.
+    """
+    base_url = 'https://github.com/adriabarreto/pipeline-brfss/raw/main/data/cleaned/brfss_cleaned_{ano}.csv'
+    ano = 2015  # Começa em 2015
+    ultimo_ano_valido = None
+
+    while True:  # Loop infinito até achar o último ano
+        url = base_url.format(ano=ano)
+        
+        try:
+            response = requests.head(url, allow_redirects=True, timeout=5)
+            
+            if response.status_code == 200:
+                ultimo_ano_valido = ano
+                ano += 1  # Vai para o próximo ano
+            elif response.status_code == 404:
+                break  # Sai do loop
+            else:
+                break  # Sai se houver outro erro HTTP
+                
+        except requests.exceptions.RequestException as e:
+            break  # Sai se houver erro de rede/timeout
+    
+    if ultimo_ano_valido is not None:
+        url_download = base_url.format(ano=ultimo_ano_valido)
+        nome_arquivo = f'brfss_cleaned_{ultimo_ano_valido}.csv'
+        
+        try:
+            response = requests.get(url_download, timeout=30)
+            response.raise_for_status()  # Verifica erros
+            
+            with open(nome_arquivo, 'wb') as f:
+                f.write(response.content)
+            
+            return nome_arquivo
+        except requests.exceptions.RequestException as e:
+            return None
+    else:
+        return None
 
 def load_dataset(dataset_path) -> pd.DataFrame:
     """
-    Carrega um arquivo CSV com métricas extraídas e rótulos associados.
+    Carrega um arquivo CSV com os dados.
 
     Parameters:
         dataset_path (str): Caminho para o arquivo CSV do dataset.
@@ -73,22 +119,48 @@ def save_metrics(metrics, filename="model_metrics.json"):
 
 def create_preprocessor():
     """Cria o pré-processador para as colunas do dataset de diabetes"""
-    # Colunas para normalização (variáveis contínuas/ordinais)
-    columns_to_normalize = ["GenHlth", "PhysHlth", "MentHlth", "PoorHlth", "Educa", "Income2", "Checkup1"]
-    # Colunas para pass-through (variáveis binárias/categóricas)
-    columns_to_pass_through = ["Sex", "Marital", "Employ1", "HlthPln1", "BpHigh4", "ToldHi2", "CvdStrk3", "ChcScncr", "ChcoCncr", "ChcCopd1", "HavArth3", "AddEpev2", "ChkIdny", "DiffWalk"]
+     # Colunas para normalização (contínuas/ordinais)
+    columns_to_normalize = [
+        "BMI", 
+        "GenHlth", 
+        "PhysHlth", 
+        "MentHlth", 
+        "Education", 
+        "Income", 
+        "PhysActivity"
+    ]
+    
+    # Colunas para pass-through (binárias/categóricas)
+    columns_to_pass_through = [
+        "Sex", 
+        "HighBP", 
+        "CholCheck", 
+        "Smoker", 
+        "HvyAlcoholConsump", 
+        "AnyHealthcare", 
+        "NoDocbcCost", 
+        "HeartDiseaseorAttack", 
+        "Stroke", 
+        "DiffWalk", 
+        "HighChol", 
+        "Fruits", 
+        "Veggies"
+    ]
 
-    return ColumnTransformer(transformers=[
-          ('num_pipeline', Pipeline([
-              ('imputer', SimpleImputer(strategy='mean')),  # Imputação com média
-              ('scaler', MinMaxScaler())                    # Normalização Min-Max
-          ]), columns_to_normalize),
+    return ColumnTransformer(
+        transformers=[
+            # Pipeline para normalização
+            ('num_pipeline', Pipeline([
+                ('imputer', SimpleImputer(strategy='mean')),  # Imputação com média
+                ('scaler', MinMaxScaler())                    # Normalização Min-Max
+            ]), columns_to_normalize),
 
-          ('binary_pipeline', Pipeline([
-              ('imputer', SimpleImputer(strategy='most_frequent'))  # Imputação com moda
-          ]), columns_to_pass_through)
-      ],
-      remainder='passthrough'  # Qualquer coluna não listada será passada sem alteração
+            # Pipeline para variáveis binárias/categóricas
+            ('binary_pipeline', Pipeline([
+                ('imputer', SimpleImputer(strategy='most_frequent'))  # Imputação com moda
+            ]), columns_to_pass_through)
+        ],
+        remainder='passthrough'  # Mantém colunas não listadas (ex: 'Age' ou 'Diabetes_binary')
     )
 
 def create_balance_pipeline(model, data_balance):
@@ -221,7 +293,7 @@ def select_best_model(fold_results):
     return max(avg_scores.items(), key=lambda x: x[1])[0]
 
 
-def start(dataset_path):
+def start():
     """Função principal"""
     logging.basicConfig(
         filename='diabetes_model.log', 
@@ -230,10 +302,9 @@ def start(dataset_path):
     )
     logger = logging.getLogger(__name__)
 
+    dataset_path = download_dataset()
     # Carrega o dataset
     dataset = load_dataset(dataset_path)
-    # remover depois
-    dataset = dataset.head(500)
     dataset['Diabetes_binary'] = dataset['Diabetes_binary'].round().astype(int)
     x_features = dataset.columns.drop('Diabetes_binary').tolist()
     y_label = 'Diabetes_binary'
@@ -317,8 +388,4 @@ def start(dataset_path):
     }
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        dataset_path = sys.argv[1]
-        start(dataset_path)
-    else:
-        print("Por favor, forneça o caminho para o dataset como argumento.")
+    start()
