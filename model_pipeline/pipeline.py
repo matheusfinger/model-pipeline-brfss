@@ -378,6 +378,8 @@ def train(logger):
     logger.info(f"Salvando métricas em {filename}...")
     save_metrics(metrics=metrics, filename=filename)
 
+    os.remove(dataset_path)
+
     return {
         'model_name': best_model_name,
         'resampling_method': best_method,
