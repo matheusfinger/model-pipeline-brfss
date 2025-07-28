@@ -1,0 +1,30 @@
+{
+    "metrics": {
+        "accuracy_score": 0.7326256274159119,
+        "roc_auc_score": 0.7006415248403942,
+        "f1_score": 0.41526193600484507,
+        "precision_score": 0.3038629145431716,
+        "recall_score": 0.6556175298804781,
+        "confusion_matrix": [
+            [
+                55265,
+                18850
+            ],
+            [
+                4322,
+                8228
+            ]
+        ],
+        "classification_report": "              precision    recall  f1-score   support\n\n           0       0.93      0.75      0.83     74115\n           1       0.30      0.66      0.42     12550\n\n    accuracy                           0.73     86665\n   macro avg       0.62      0.70      0.62     86665\nweighted avg       0.84      0.73      0.77     86665\n"
+    },
+    "model_info": {
+        "model_name": "RandomForestClassifier",
+        "model_params": {
+            "classifier__criterion": "entropy",
+            "max_depth": 10,
+            "sampler__sampling_strategy": 0.5,
+            "random_state": 42
+        }
+    },
+    "ano": 2023
+}

@@ -17,6 +17,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import make_scorer, f1_score
 import requests
 import os
+import json
 
 def download_dataset() -> pd.DataFrame:
     """
@@ -77,7 +78,7 @@ def load_dataset(dataset_path) -> pd.DataFrame:
 
 def save_model(model, model_name, data_balance, cv_criteria, ano: str):
     """Salva o modelo em arquivo pickle"""
-    with open(f"model-{model_name}-{cv_criteria.upper()}-{data_balance}-{ano}.pkl", "wb") as f:
+    with open(f"best_model.pkl", "wb") as f:
         pickle.dump(model, f)
 
 def load_model(file_model_path):
@@ -105,18 +106,42 @@ def extract_model_metrics_scores(y_test, y_pred, y_prob=None) -> dict:
     }
     return scores
 
-def save_metrics(metrics, filename="model_metrics.json"):
-    """Salva as métricas do modelo em um arquivo JSON"""
-    import json
+def save_metrics(metrics, model_info, ano, filename="model_metrics.json"):
+    """
+    Salva métricas e informações do modelo em um arquivo JSON.
+
+    Parâmetros:
+    -----------
+    metrics : dict
+        Dicionário com métricas de avaliação (accuracy, precision, etc.)
+    model_info : dict
+        Dicionário com informações do modelo contendo:
+        - model_params: hiperparâmetros do modelo
+        - resampling_method: método de reamostragem (opcional)
+        - resampling_params: parâmetros de reamostragem (opcional)
+        - dataset_date: data do dataset (opcional)
+    filename : str, opcional
+        Nome do arquivo de saída (padrão: 'model_metrics.json')
+    """
+        
+    output_data = {
+        "metrics": {},
+        "model_info": model_info,
+        "ano": ano
+    }
+    
+    # Converte métricas para tipos serializáveis
+    for k, v in metrics.items():
+        if isinstance(v, np.ndarray):
+            output_data["metrics"][k] = v.tolist()
+        elif hasattr(v, 'item'):  # Converte numpy scalars
+            output_data["metrics"][k] = v.item()
+        else:
+            output_data["metrics"][k] = v
+    
+    # Salva em JSON
     with open(filename, 'w') as f:
-        # Convertendo numpy arrays e outros tipos para serializáveis
-        serializable_metrics = {}
-        for k, v in metrics.items():
-            if isinstance(v, np.ndarray):
-                serializable_metrics[k] = v.tolist()
-            else:
-                serializable_metrics[k] = v
-        json.dump(serializable_metrics, f, indent=4)
+        json.dump(output_data, f, indent=4)
 
 def create_preprocessor():
     """Cria o pré-processador para as colunas do dataset de diabetes"""
@@ -311,7 +336,7 @@ def train(logger):
     
     grid_params_list = {
         "DecisionTree": {
-            'classifier__max_depth': [3, 5, 7, None],
+            'classifier__max_depth': [5, 7, 10, None],
             'classifier__criterion': ['gini', 'entropy'],
             'sampler__sampling_strategy': [0.5, 0.7, 1.0]  # Parâmetros para SMOTE
         }
@@ -359,6 +384,7 @@ def train(logger):
     }
 
     logger.info("Treinando modelo final...")
+    ano = str(ultimo_ano)
     metrics = build_champion_model(
         dataset=dataset,
         x_features=x_features,
@@ -366,7 +392,7 @@ def train(logger):
         data_balance=best_method,
         model_info=model_info,
         cv_criteria="f1",
-        ano = str(ultimo_ano)
+        ano = ano
     )
 
     logger.info("Métricas finais:")
@@ -374,9 +400,9 @@ def train(logger):
         if metric not in ['confusion_matrix', 'classification_report']:
             logger.info(f"{metric}: {value:.4f}")
 
-    filename = f"metrics-{best_model_name}-{best_method}-f1.json"
+    filename = f"model_metrics.json"
     logger.info(f"Salvando métricas em {filename}...")
-    save_metrics(metrics=metrics, filename=filename)
+    save_metrics(metrics=metrics, model_info=model_info, ano=ano, filename=filename)
 
     os.remove(dataset_path)
 

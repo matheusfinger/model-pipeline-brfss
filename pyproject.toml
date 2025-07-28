@@ -13,7 +13,8 @@ dependencies = [
     "numpy>=1.24.0",
     "scikit-learn>=1.2.0,<1.7.0",
     "imbalanced-learn>=0.13.0",
-    "pickle-mixin>=1.0.0"
+    "pickle-mixin>=1.0.0",
+    "jsonlib-python3>=1.6.1"
 ]
 
 [tool.poetry]
