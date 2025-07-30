@@ -18,6 +18,7 @@ from sklearn.metrics import make_scorer, f1_score
 import requests
 import os
 import json
+from datetime import datetime
 
 def download_dataset() -> pd.DataFrame:
     """
@@ -26,29 +27,10 @@ def download_dataset() -> pd.DataFrame:
     Returns:
         sdp_dataset (pandas.DataFrame): DataFrame com os dados carregados.
     """
-    base_url = 'https://github.com/adriabarreto/pipeline-brfss/raw/main/data/cleaned/brfss_cleaned_{ano}.csv'
-    ano = 2015  # Começa em 2015
-    ultimo_ano_valido = None
-
-    while True:  # Loop infinito até achar o último ano
-        url = base_url.format(ano=ano)
-        
-        try:
-            response = requests.head(url, allow_redirects=True, timeout=5)
-            
-            if response.status_code == 200:
-                ultimo_ano_valido = ano
-                ano += 1  # Vai para o próximo ano
-            elif response.status_code == 404:
-                break  # Sai do loop
-            else:
-                break  # Sai se houver outro erro HTTP
-                
-        except requests.exceptions.RequestException as e:
-            break  # Sai se houver erro de rede/timeout
+    ultimo_ano_valido = checa_ultimo_dataset()
     
     if ultimo_ano_valido is not None:
-        url_download = base_url.format(ano=ultimo_ano_valido)
+        url_download = 'https://raw.githubusercontent.com/adriabarreto/pipeline-brfss/main/data/cleaned/brfss_cleaned_{ultimo_ano_valido}.csv'
         nome_arquivo = f'brfss_cleaned_{ultimo_ano_valido}.csv'
         
         try:
@@ -63,6 +45,33 @@ def download_dataset() -> pd.DataFrame:
             return None
     else:
         return None
+    
+def checa_ultimo_dataset() -> int:
+    base_url = 'https://raw.githubusercontent.com/adriabarreto/pipeline-brfss/main/data/cleaned/brfss_cleaned_{ano}.csv'
+    ano = 2016  # Começa em 2016
+    ano_atual = int(datetime.now().year)
+    ultimo_ano_valido = None
+
+    while ano <= ano_atual:
+        url = base_url.format(ano=ano)
+        try:
+            response = requests.head(url, allow_redirects=True, timeout=5)
+            
+            if response.status_code == 200:
+                ultimo_ano_valido = ano
+                ano += 1  # Vai para o próximo ano
+            elif response.status_code == 404:
+                ano += 1
+                continue
+            else:
+                ano += 1
+                continue
+                
+        except requests.exceptions.RequestException as e:
+            ano += 1
+            continue
+        ano += 1
+    return ultimo_ano_valido
 
 def load_dataset(dataset_path) -> pd.DataFrame:
     """
@@ -76,7 +85,7 @@ def load_dataset(dataset_path) -> pd.DataFrame:
     """
     return pd.read_csv(dataset_path)
 
-def save_model(model, model_name, data_balance, cv_criteria, ano: str):
+def save_model(model):
     """Salva o modelo em arquivo pickle"""
     with open(f"best_model.pkl", "wb") as f:
         pickle.dump(model, f)
@@ -194,33 +203,19 @@ def create_balance_pipeline(model, data_balance):
     if data_balance == 'SMOTE':
         return ImbPipeline([
             ('preprocessor', create_preprocessor()),
-            ('sampler', SMOTE(random_state=42)),
-            ('classifier', model)
+            ('sampler', SMOTE(random_state=42)),  # Nome do passo: 'sampler'
+            ('classifier', model)                  # Nome do passo: 'classifier'
         ])
     elif data_balance == 'ADASYN':
         return ImbPipeline([
             ('preprocessor', create_preprocessor()),
-            ('sampler', ADASYN(random_state=42)),
+            ('sampler', ADASYN(random_state=42)),  # Nome do passo: 'sampler'
             ('classifier', model)
         ])
     elif data_balance == 'Undersampling':
         return ImbPipeline([
             ('preprocessor', create_preprocessor()),
-            ('sampler', RandomUnderSampler(random_state=42)),
-            ('classifier', model)
-        ])
-    elif data_balance == 'SMOTE+Undersampling':
-        return ImbPipeline([
-            ('preprocessor', create_preprocessor()),
-            ('sampler', SMOTE(random_state=42)),
-            ('undersampler', RandomUnderSampler(random_state=42)),
-            ('classifier', model)
-        ])
-    elif data_balance == 'ADASYN+Undersampling':
-        return ImbPipeline([
-            ('preprocessor', create_preprocessor()),
-            ('sampler', ADASYN(random_state=42)),
-            ('undersampler', RandomUnderSampler(random_state=42)),
+            ('sampler', RandomUnderSampler(random_state=42)),  # Nome do passo: 'sampler'
             ('classifier', model)
         ])
     else:
@@ -249,7 +244,7 @@ def run_experiment(dataset, x_features, y_label, data_balance, models, grid_para
             # Configura GridSearch
             grid_model = GridSearchCV(
                 pipeline,
-                grid_params_list[model_name],
+                grid_params_list,
                 cv=3,
                 scoring=cv_criteria,
                 n_jobs=-1
@@ -275,7 +270,7 @@ def run_experiment(dataset, x_features, y_label, data_balance, models, grid_para
     return models_info_per_fold
 
 
-def build_champion_model(dataset, x_features, y_label, data_balance, model_info, cv_criteria, ano: str):
+def build_champion_model(dataset, x_features, y_label, data_balance, model_info, cv_criteria, grid_params_list):
     """Constrói o modelo campeão"""
     X = dataset[x_features]
     y = dataset[y_label]
@@ -288,7 +283,7 @@ def build_champion_model(dataset, x_features, y_label, data_balance, model_info,
     # Treina com GridSearch
     grid_model = GridSearchCV(
         pipeline,
-        model_info["grid_params"],
+        grid_params_list[data_balance],
         cv=5,
         scoring=cv_criteria,
         n_jobs=-1
@@ -301,9 +296,9 @@ def build_champion_model(dataset, x_features, y_label, data_balance, model_info,
 
     metrics_scores = extract_model_metrics_scores(y_test, y_pred, y_prob)
 
-    save_model(grid_model.best_estimator_, model_info["name"], data_balance, cv_criteria, ano)
+    save_model(grid_model.best_estimator_)
 
-    return metrics_scores
+    return metrics_scores, grid_model.best_params_
 
 def select_best_model(fold_results):
     """Seleciona o melhor modelo baseado na média do F1-score"""
@@ -321,11 +316,14 @@ def select_best_model(fold_results):
 
 def train(logger):
     """Função de treino do modelo"""
-
-    dataset_path, ultimo_ano = download_dataset()
+    teste = download_dataset()
+    if teste is None:
+        logger.info("Erro ao baixar dataset")
+        return None
+    dataset_path, ultimo_ano = teste
     # Carrega o dataset
     dataset = load_dataset(dataset_path)
-    dataset = dataset.head(500)
+    dataset = dataset
     dataset['Diabetes_binary'] = dataset['Diabetes_binary'].round().astype(int)
     x_features = dataset.columns.drop('Diabetes_binary').tolist()
     y_label = 'Diabetes_binary'
@@ -335,14 +333,26 @@ def train(logger):
     }
     
     grid_params_list = {
-        "DecisionTree": {
+        "SMOTE": {
             'classifier__max_depth': [5, 7, 10, None],
             'classifier__criterion': ['gini', 'entropy'],
-            'sampler__sampling_strategy': [0.5, 0.7, 1.0]  # Parâmetros para SMOTE
+            'sampler__k_neighbors': [3, 5, 7, 10], 
+            'sampler__sampling_strategy': [0.5, 0.7, 0.9] 
+        },
+        "ADASYN": {
+            'classifier__max_depth': [5, 7, 10, None],
+            'classifier__criterion': ['gini', 'entropy'],
+            'sampler__n_neighbors': [3, 5, 7, 10], 
+            'sampler__sampling_strategy': [0.5, 0.7, 0.9] 
+        },
+        "Undersampling": {
+            'classifier__max_depth': [5, 7, 10, None],
+            'classifier__criterion': ['gini', 'entropy'],
+            'sampler__sampling_strategy': [0.5, 0.7, 0.9] 
         }
     }
 
-    balance_methods = ["SMOTE", "ADASYN", "Undersampling", "SMOTE+Undersampling", "ADASYN+Undersampling"]
+    balance_methods = ["SMOTE", "ADASYN", "Undersampling"]
     all_results = {}
 
     logger.info("Iniciando experimentos com diferentes métodos de balanceamento...")
@@ -354,7 +364,7 @@ def train(logger):
             y_label=y_label,
             data_balance=method,
             models=models,
-            grid_params_list=grid_params_list,
+            grid_params_list=grid_params_list[method],
             cv_criteria="f1"
         )
         all_results[method] = fold_results
@@ -380,19 +390,19 @@ def train(logger):
     model_info = {
         "name": best_model_name,
         "instance": models[best_model_name],
-        "grid_params": grid_params_list[best_model_name]
+        "grid_params": grid_params_list[best_method]
     }
 
     logger.info("Treinando modelo final...")
     ano = str(ultimo_ano)
-    metrics = build_champion_model(
+    metrics, best_params = build_champion_model(
         dataset=dataset,
         x_features=x_features,
         y_label=y_label,
         data_balance=best_method,
         model_info=model_info,
         cv_criteria="f1",
-        ano = ano
+        grid_params_list=grid_params_list
     )
 
     logger.info("Métricas finais:")
@@ -402,7 +412,12 @@ def train(logger):
 
     filename = f"model_metrics.json"
     logger.info(f"Salvando métricas em {filename}...")
-    save_metrics(metrics=metrics, model_info=model_info, ano=ano, filename=filename)
+    infos_modelo = {
+        "model_name": best_model_name,
+        "model_params": best_params,
+        "resampling_method": best_method,
+    }
+    save_metrics(metrics=metrics, model_info=infos_modelo, ano=ano, filename=filename)
 
     os.remove(dataset_path)
 
@@ -417,7 +432,7 @@ def checaModelo() -> list:
     Retorna lista de modelos salvos no diretório atual
     '''
     arquivos_correspondentes = [arquivo for arquivo in os.listdir() 
-                           if arquivo.startswith('model-DecisionTree') and arquivo.endswith('.pkl')]
+                           if arquivo.endswith('.pkl')]
 
     return arquivos_correspondentes
 
@@ -468,25 +483,33 @@ if __name__ == "__main__":
         logger.info("Foram identificados mais de um modelo. Por favor, mantenha somente um modelo no projeto.")
     else:
         caminho_modelo = arq_modelo[0]
-        ano_modelo = caminho_modelo[-8:-4]
-        dataset_info = download_dataset()
-        if dataset_info is None:
-            logger.error("Falha ao baixar o dataset mais recente")
+        # Abrir e carregar o conteúdo do arquivo JSON
+        with open('model_metrics.json', 'r') as f:
+            dados = json.load(f)
+
+        # Acessar o valor do ano
+        ano_modelo = dados['ano']
+        ultimo_ano = checa_ultimo_dataset()
+        if ultimo_ano is None:
+            logger.error("Falha ao encontrar o dataset mais recente")
             sys.exit(1)
-        dataset_path, ultimo_ano = dataset_info
         # Verifica se é atual
-        if ano_modelo != str(ultimo_ano):
+        if int(ano_modelo) < ultimo_ano:
             logger.info(f"Modelo existente é de {ano_modelo}, mas dataset mais recente é de {ultimo_ano}")
             logger.info("Testando modelo com dados atuais...")
             try:
+                # Baixa o dataset mais recente
+                dataset_path, ultimo_ano = download_dataset()
+                # Testa se o modelo continua com performance
                 f1 = testa_modelo(dataset_path, caminho_modelo)
                 logger.info(f"F1-score do modelo atual: {f1:.4f}")
                 
-                if f1 < 0.38:  # Se performance abaixo do threshold
+                if f1 < 0.3:  # Se performance abaixo do threshold
                     logger.info("Performance abaixo do esperado. Treinando novo modelo...")
                     train(logger)
                 else:
                     logger.info("Performance aceitável. Mantendo modelo existente.")
+                    # os.remove(dataset_path)
             except Exception as e:
                 logger.error(f"Erro ao testar modelo: {str(e)}")
                 logger.info("Treinando novo modelo devido ao erro...")
