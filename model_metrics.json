@@ -18,13 +18,13 @@
         "classification_report": "              precision    recall  f1-score   support\n\n           0       0.93      0.75      0.83     74115\n           1       0.30      0.66      0.42     12550\n\n    accuracy                           0.73     86665\n   macro avg       0.62      0.70      0.62     86665\nweighted avg       0.84      0.73      0.77     86665\n"
     },
     "model_info": {
-        "model_name": "RandomForestClassifier",
+        "model_name": "DecisionTree",
         "model_params": {
             "classifier__criterion": "entropy",
             "max_depth": 10,
-            "sampler__sampling_strategy": 0.5,
-            "random_state": 42
-        }
+            "sampler__sampling_strategy": 0.5
+        },
+        "resampling_method": "Undersampling"
     },
     "ano": 2023
 }
